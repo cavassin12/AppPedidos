@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 
+import 'Login.dart';
+
 void main() {
-  runApp(MaterialApp(title: "Lançador de Pedido", home: Home()));
+  runApp(MaterialApp(title: "Lançador de Pedido", home: Login()));
 }
 
 class Home extends StatefulWidget {
@@ -15,13 +17,38 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   Map _Clientes = {};
+  List _DadosCli = [];
+  int _NrPagina = 0;
+  int _PorPagina = 4;
+  String _DsBusca = "";
+  final CampoBusca = TextEditingController();
 
   Future<Map> _buscarClientes() async {
     var url = "http://192.168.15.9/CadApi/Clientes/getClientes";
-    http.Response busca = await http.post(url, body: {"idusuario": '1'});
-    _Clientes = json.decode(busca.body);
-    print('Response body: ' + _Clientes["dados"][0].toString());
-    // _Clientes =
+    Map dados = {
+      "idusuario": '1',
+      "pagina": _NrPagina.toString(),
+      "PorPagina": _PorPagina.toString(),
+      "nome": _DsBusca
+    };
+
+    _Clientes = await _SolicitaWeb(url, dados);
+    _DadosCli = _Clientes["dados"];
+  }
+
+  Future<Map> _buscarFiltroClientes() async {
+    var ds = CampoBusca.text;
+    setState(() {
+      if (ds != "") {
+        _DsBusca = ds;
+      }
+      _buscarClientes();
+    });
+  }
+
+  Future<Map> _SolicitaWeb(String Url, Map dados) async {
+    http.Response busca = await http.post(Url, body: dados);
+    return json.decode(busca.body);
   }
 
   @override
@@ -48,11 +75,12 @@ class _HomeState extends State<Home> {
                               labelText: "Buscar Cliente",
                               labelStyle: TextStyle(
                                   color: Colors.blue, fontSize: 14.0)),
+                          controller: CampoBusca,
                         )),
                         RaisedButton(
                           child: Icon(Icons.search),
                           onPressed: () {
-                            _buscarClientes();
+                            _buscarFiltroClientes();
                           },
                         )
                       ],
@@ -60,13 +88,45 @@ class _HomeState extends State<Home> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        ListView.builder(
-                            padding: EdgeInsets.all(5),
-                            itemCount: 1,
-                            itemBuilder: (context, index) {
-                              return ListTile(
-                                title: _Clientes["dados"][index]["nm_cliente"],
-                              );
+                        FutureBuilder(
+                            future: _buscarClientes(),
+                            builder: (context, snapshot) {
+                              switch (snapshot.connectionState) {
+                                case ConnectionState.none:
+                                case ConnectionState.waiting:
+                                  return Center(
+                                    child: Text(
+                                      "Carregando Dados",
+                                      style: TextStyle(
+                                          color: Colors.amber, fontSize: 25.0),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  );
+                                default:
+                                  return Expanded(
+                                      child: ListView.builder(
+                                          scrollDirection: Axis.vertical,
+                                          shrinkWrap: true,
+                                          padding: EdgeInsets.all(5),
+                                          itemCount: _DadosCli.length,
+                                          itemBuilder: (context, index) {
+                                            return ListTile(
+                                              title: Text(_Clientes["dados"]
+                                                  [index]["nm_cliente"]),
+                                              subtitle: Text("CPF: " +
+                                                  _Clientes["dados"][index]
+                                                      ["cgc"]),
+                                              onTap: () {
+                                                DialogBusca(
+                                                    context,
+                                                    _Clientes["dados"][index]
+                                                        ["idcliente"]);
+                                              },
+                                              onLongPress: () {},
+                                              //trailing: Icon(Icons.launch),
+                                            );
+                                          }));
+                              }
                             })
                       ],
                     )
@@ -74,33 +134,39 @@ class _HomeState extends State<Home> {
                 ))));
   }
 
-  @override
-  // TODO: implement widget
-  Widget _ListaCLientes(BuildContext context, int index) {
-    return Container(
-      color: Colors.white,
-    );
-  }
-
-  void DialogBusca(BuildContext context) {
+  void DialogBusca(BuildContext context, String cgc) {
     Dialog dialogo = Dialog(
       child: Container(
-        width: 350,
-        height: 400,
+        width: 390,
+        height: 350,
         child: Column(
           children: <Widget>[
             Container(
-              padding: EdgeInsets.all(12),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.grey[100]),
-              child: Text(
-                "Dialog With Image",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
+                padding: EdgeInsets.all(12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: Colors.grey[100]),
+                child: Column(
+                  children: <Widget>[
+                    Text(
+                      "Detalhes Cliente",
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    RaisedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text("Fechar",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.0,
+                          )),
+                          color: Colors.red,
+                    )
+                  ],
+                )),
           ],
         ),
       ),
