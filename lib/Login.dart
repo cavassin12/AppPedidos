@@ -10,14 +10,16 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Scaffold(
+      body: Container(
       color: Colors.blueAccent,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Row(
             children: <Widget>[
-              TextField(
+
+              Expanded(child: TextField(
                 decoration: InputDecoration(
                   labelText: "Login",
                   labelStyle: TextStyle(color: Colors.amber),
@@ -26,12 +28,15 @@ class _LoginState extends State<Login> {
                 ),
                 style: TextStyle(color: Colors.amber, fontSize: 20.0),
                 controller: controlLogin,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.emailAddress,
+              )
               )
             ],
           )
         ],
-      ),
+      )
+    ),
     );
+    
   }
 }
